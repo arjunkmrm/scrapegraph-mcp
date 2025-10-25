@@ -1,3 +1,3 @@
-"""Scrapegraph server - An MCP server built with Smithery."""
+"""Hello Server - An MCP server built with Smithery."""
 
 __version__ = "0.1.0"
