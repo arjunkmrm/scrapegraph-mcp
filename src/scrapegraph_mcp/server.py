@@ -9,7 +9,6 @@ This server exposes methods to use ScapeGraph's AI-powered web scraping services
 - smartcrawler_fetch_results: Retrieve results from asynchronous crawling operations
 """
 
-import os
 import json
 from typing import Any, Dict, Optional, List, Union
 
