@@ -308,15 +308,6 @@ class ServerConfig(BaseModel):
     scrapegraph_api_key: str = Field(description="Your Scrapegraph API key")
 
 
-def get_api_key(ctx: Context) -> Optional[str]:
-    """
-    Helper function to get the Scrapegraph API key from context or environment.
-    """
-    if ctx and ctx.session_config and ctx.session_config.scrapegraph_api_key:
-        return ctx.session_config.scrapegraph_api_key
-    return os.environ.get("SGAI_API_KEY")
-
-
 @smithery.server(config_schema=ServerConfig)
 def create_server() -> FastMCP:
     """
@@ -327,6 +318,14 @@ def create_server() -> FastMCP:
     """
     # Create MCP server
     mcp = FastMCP("ScapeGraph API MCP Server")
+
+    def get_api_key(ctx: Context) -> Optional[str]:
+        """
+        Helper function to get the Scrapegraph API key from context or environment.
+        """
+        if ctx and ctx.session_config and ctx.session_config.scrapegraph_api_key:
+            return ctx.session_config.scrapegraph_api_key
+        return os.environ.get("SGAI_API_KEY")
 
     # Add tool for markdownify
     @mcp.tool()
