@@ -305,7 +305,7 @@ class ScapeGraphClient:
 
 # Pydantic configuration schema for Smithery
 class ConfigSchema(BaseModel):
-    api_key: str = Field(..., description="Your Scrapegraph API key")
+    api_key: str = Field(default="test-api-key", description="Your Scrapegraph API key")
 
 
 def get_api_key(ctx: Context) -> Optional[str]:
