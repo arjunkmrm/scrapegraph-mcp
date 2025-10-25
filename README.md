@@ -54,7 +54,7 @@ To utilize this server, you'll need a ScapeGraph API key. Follow these steps to 
 For automated installation of the ScrapeGraph API Integration Server using [Smithery](https://smithery.ai/server/@ScrapeGraphAI/scrapegraph-mcp):
 
 ```bash
-npx -y @smithery/cli install @ScrapeGraphAI/scrapegraph-mcp --client claude
+npx -y @smithery/cli install @ScrapeGraphAI/scrapegraph-mcp
 ```
 
 ### Claude Desktop Configuration
