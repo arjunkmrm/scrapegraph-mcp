@@ -14,11 +14,9 @@ import json
 from typing import Any, Dict, Optional, List, Union
 
 import httpx
-import uvicorn
-from fastmcp import FastMCP
+from fastmcp import FastMCP, Context
 from smithery.decorators import smithery
 from pydantic import BaseModel, Field
-from starlette.middleware.cors import CORSMiddleware
 
 
 class ScapeGraphClient:
@@ -307,48 +305,16 @@ class ScapeGraphClient:
 
 # Pydantic configuration schema for Smithery
 class ConfigSchema(BaseModel):
-    api_key: str = Field(description="Your Scrapegraph API key")
+    api_key: str = Field(..., description="Your Scrapegraph API key")
 
 
 # Create MCP server
 mcp = FastMCP("ScapeGraph API MCP Server")
 
-# Default API key (will be overridden in main or by direct assignment)
-default_api_key = os.environ.get("SGAI_API_KEY")
-scrapegraph_client = ScapeGraphClient(default_api_key) if default_api_key else None
-
-
-# Smithery server function with config schema
-@smithery.server(config_schema=ConfigSchema)
-def create_server(config: Optional[ConfigSchema] = None) -> FastMCP:
-    """
-    Create and return the FastMCP server instance for Smithery deployment.
-
-    Args:
-        config: Configuration object with api_key
-
-    Returns:
-        Configured FastMCP server instance
-    """
-    global scrapegraph_client
-
-    # Get API key from config or environment
-    api_key = None
-    if config and hasattr(config, 'api_key'):
-        api_key = config.api_key
-    else:
-        api_key = os.environ.get("SGAI_API_KEY")
-
-    # Initialize client if API key is available
-    if api_key:
-        scrapegraph_client = ScapeGraphClient(api_key)
-
-    return mcp
-
 
 # Add tool for markdownify
 @mcp.tool()
-def markdownify(website_url: str) -> Dict[str, Any]:
+def markdownify(website_url: str, ctx: Context) -> Dict[str, Any]:
     """
     Convert a webpage into clean, formatted markdown.
 
@@ -358,11 +324,9 @@ def markdownify(website_url: str) -> Dict[str, Any]:
     Returns:
         Dictionary containing the markdown result
     """
-    if scrapegraph_client is None:
-        return {"error": "ScapeGraph client not initialized. Please provide an API key."}
-
     try:
-        return scrapegraph_client.markdownify(website_url)
+        client = ScapeGraphClient(ctx.session_config.api_key)
+        return client.markdownify(website_url)
     except Exception as e:
         return {"error": str(e)}
 
@@ -372,6 +336,7 @@ def markdownify(website_url: str) -> Dict[str, Any]:
 def smartscraper(
     user_prompt: str, 
     website_url: str,
+    ctx: Context,
     number_of_scrolls: int = None,
     markdown_only: bool = None
 ) -> Dict[str, Any]:
@@ -387,11 +352,9 @@ def smartscraper(
     Returns:
         Dictionary containing the extracted data or markdown content
     """
-    if scrapegraph_client is None:
-        return {"error": "ScapeGraph client not initialized. Please provide an API key."}
-
     try:
-        return scrapegraph_client.smartscraper(user_prompt, website_url, number_of_scrolls, markdown_only)
+        client = ScapeGraphClient(ctx.session_config.api_key)
+        return client.smartscraper(user_prompt, website_url, number_of_scrolls, markdown_only)
     except Exception as e:
         return {"error": str(e)}
 
@@ -400,6 +363,7 @@ def smartscraper(
 @mcp.tool()
 def searchscraper(
     user_prompt: str,
+    ctx: Context,
     num_results: int = None,
     number_of_scrolls: int = None
 ) -> Dict[str, Any]:
@@ -414,11 +378,9 @@ def searchscraper(
     Returns:
         Dictionary containing search results and reference URLs
     """
-    if scrapegraph_client is None:
-        return {"error": "ScapeGraph client not initialized. Please provide an API key."}
-
     try:
-        return scrapegraph_client.searchscraper(user_prompt, num_results, number_of_scrolls)
+        client = ScapeGraphClient(ctx.session_config.api_key)
+        return client.searchscraper(user_prompt, num_results, number_of_scrolls)
     except Exception as e:
         return {"error": str(e)}
 
@@ -427,6 +389,7 @@ def searchscraper(
 @mcp.tool()
 def smartcrawler_initiate(
     url: str,
+    ctx: Context,
     prompt: str = None,
     extraction_mode: str = "ai",
     depth: int = None,
@@ -451,11 +414,9 @@ def smartcrawler_initiate(
     Returns:
         Dictionary containing the request ID for async processing
     """
-    if scrapegraph_client is None:
-        return {"error": "ScapeGraph client not initialized. Please provide an API key."}
-
     try:
-        return scrapegraph_client.smartcrawler_initiate(
+        client = ScapeGraphClient(ctx.session_config.api_key)
+        return client.smartcrawler_initiate(
             url=url,
             prompt=prompt,
             extraction_mode=extraction_mode,
@@ -469,7 +430,7 @@ def smartcrawler_initiate(
 
 # Add tool for fetching SmartCrawler results
 @mcp.tool()
-def smartcrawler_fetch_results(request_id: str) -> Dict[str, Any]:
+def smartcrawler_fetch_results(request_id: str, ctx: Context) -> Dict[str, Any]:
     """
     Fetch the results of a SmartCrawler operation.
 
@@ -480,18 +441,16 @@ def smartcrawler_fetch_results(request_id: str) -> Dict[str, Any]:
         Dictionary containing the crawled data (structured extraction or markdown)
         and metadata about processed pages
     """
-    if scrapegraph_client is None:
-        return {"error": "ScapeGraph client not initialized. Please provide an API key."}
-
     try:
-        return scrapegraph_client.smartcrawler_fetch_results(request_id)
+        client = ScapeGraphClient(ctx.session_config.api_key)
+        return client.smartcrawler_fetch_results(request_id)
     except Exception as e:
         return {"error": str(e)}
 
 
 # Add tool for basic scrape
 @mcp.tool()
-def scrape(website_url: str, render_heavy_js: Optional[bool] = None) -> Dict[str, Any]:
+def scrape(website_url: str, ctx: Context, render_heavy_js: Optional[bool] = None) -> Dict[str, Any]:
     """
     Fetch page content for a URL.
 
@@ -499,11 +458,9 @@ def scrape(website_url: str, render_heavy_js: Optional[bool] = None) -> Dict[str
         website_url: URL to scrape
         render_heavy_js: Whether to render heavy JS (optional)
     """
-    if scrapegraph_client is None:
-        return {"error": "ScapeGraph client not initialized. Please provide an API key."}
-
     try:
-        return scrapegraph_client.scrape(website_url=website_url, render_heavy_js=render_heavy_js)
+        client = ScapeGraphClient(ctx.session_config.api_key)
+        return client.scrape(website_url=website_url, render_heavy_js=render_heavy_js)
     except httpx.HTTPError as http_err:
         return {"error": str(http_err)}
     except ValueError as val_err:
@@ -512,18 +469,16 @@ def scrape(website_url: str, render_heavy_js: Optional[bool] = None) -> Dict[str
 
 # Add tool for sitemap extraction
 @mcp.tool()
-def sitemap(website_url: str) -> Dict[str, Any]:
+def sitemap(website_url: str, ctx: Context) -> Dict[str, Any]:
     """
     Extract sitemap for a website.
 
     Args:
         website_url: Base website URL
     """
-    if scrapegraph_client is None:
-        return {"error": "ScapeGraph client not initialized. Please provide an API key."}
-
     try:
-        return scrapegraph_client.sitemap(website_url=website_url)
+        client = ScapeGraphClient(ctx.session_config.api_key)
+        return client.sitemap(website_url=website_url)
     except httpx.HTTPError as http_err:
         return {"error": str(http_err)}
     except ValueError as val_err:
@@ -534,6 +489,7 @@ def sitemap(website_url: str) -> Dict[str, Any]:
 @mcp.tool()
 def agentic_scrapper(
     url: str,
+    ctx: Context,
     user_prompt: Optional[str] = None,
     output_schema: Optional[Union[str, Dict[str, Any]]] = None,
     steps: Optional[Union[str, List[str]]] = None,
@@ -544,9 +500,6 @@ def agentic_scrapper(
     """
     Run the Agentic Scraper workflow. Accepts flexible input forms for steps and schema.
     """
-    if scrapegraph_client is None:
-        return {"error": "ScapeGraph client not initialized. Please provide an API key."}
-
     # Normalize inputs
     normalized_steps: Optional[List[str]] = None
     if isinstance(steps, list):
@@ -576,7 +529,8 @@ def agentic_scrapper(
             return {"error": f"Invalid JSON for output_schema: {str(e)}"}
 
     try:
-        return scrapegraph_client.agentic_scrapper(
+        client = ScapeGraphClient(ctx.session_config.api_key)
+        return client.agentic_scrapper(
             url=url,
             user_prompt=user_prompt,
             output_schema=normalized_schema,
@@ -593,44 +547,21 @@ def agentic_scrapper(
         return {"error": str(val_err)}
 
 
-# Config schema for Smithery
-CONFIG_SCHEMA = {
-    "type": "object",
-    "required": ["scrapegraphApiKey"],
-    "properties": {
-        "scrapegraphApiKey": {
-            "type": "string",
-            "description": "Your Scrapegraph API key"
-        }
-    }
-}
-
-
-@smithery.server(config_schema=CONFIG_SCHEMA)
-def create_server(config: Optional[Dict[str, Any]] = None) -> FastMCP:
+# Smithery server function with Pydantic config schema
+@smithery.server(config_schema=ConfigSchema)
+def create_server(config: Optional[ConfigSchema] = None) -> FastMCP:
     """
     Create and return the FastMCP server instance for Smithery deployment.
+    
+    The API key is provided via session config in the Context object,
+    which is passed to each tool at runtime.
 
     Args:
-        config: Configuration dictionary with optional keys:
-            - scrapegraphApiKey: API key for ScapeGraph API
+        config: Configuration object with api_key (passed via Context to tools)
 
     Returns:
         Configured FastMCP server instance
     """
-    global scrapegraph_client
-
-    # Get API key from config or environment
-    api_key = None
-    if config and "scrapegraphApiKey" in config:
-        api_key = config["scrapegraphApiKey"]
-    else:
-        api_key = os.environ.get("SGAI_API_KEY")
-
-    # Initialize client if API key is available
-    if api_key:
-        scrapegraph_client = ScapeGraphClient(api_key)
-
     return mcp
 
 
