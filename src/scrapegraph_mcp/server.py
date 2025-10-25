@@ -548,7 +548,7 @@ def agentic_scrapper(
 
 # Smithery server function with Pydantic config schema
 @smithery.server(config_schema=ConfigSchema)
-def create_server(config: Optional[ConfigSchema] = None) -> FastMCP:
+def create_server() -> FastMCP:
     """
     Create and return the FastMCP server instance for Smithery deployment.
     
