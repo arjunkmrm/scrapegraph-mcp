@@ -304,7 +304,7 @@ class ScapeGraphClient:
 
 # Pydantic configuration schema for Smithery
 class ConfigSchema(BaseModel):
-    api_key: str = Field(..., description="Your Scrapegraph API key")
+    scrapegraph_api_key: str = Field(..., description="Your Scrapegraph API key")
 
 
 # Create MCP server
@@ -324,7 +324,7 @@ def markdownify(website_url: str, ctx: Context) -> Dict[str, Any]:
         Dictionary containing the markdown result
     """
     try:
-        client = ScapeGraphClient(ctx.session_config.api_key)
+        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
         return client.markdownify(website_url)
     except Exception as e:
         return {"error": str(e)}
@@ -352,7 +352,7 @@ def smartscraper(
         Dictionary containing the extracted data or markdown content
     """
     try:
-        client = ScapeGraphClient(ctx.session_config.api_key)
+        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
         return client.smartscraper(user_prompt, website_url, number_of_scrolls, markdown_only)
     except Exception as e:
         return {"error": str(e)}
@@ -378,7 +378,7 @@ def searchscraper(
         Dictionary containing search results and reference URLs
     """
     try:
-        client = ScapeGraphClient(ctx.session_config.api_key)
+        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
         return client.searchscraper(user_prompt, num_results, number_of_scrolls)
     except Exception as e:
         return {"error": str(e)}
@@ -414,7 +414,7 @@ def smartcrawler_initiate(
         Dictionary containing the request ID for async processing
     """
     try:
-        client = ScapeGraphClient(ctx.session_config.api_key)
+        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
         return client.smartcrawler_initiate(
             url=url,
             prompt=prompt,
@@ -441,7 +441,7 @@ def smartcrawler_fetch_results(request_id: str, ctx: Context) -> Dict[str, Any]:
         and metadata about processed pages
     """
     try:
-        client = ScapeGraphClient(ctx.session_config.api_key)
+        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
         return client.smartcrawler_fetch_results(request_id)
     except Exception as e:
         return {"error": str(e)}
@@ -458,7 +458,7 @@ def scrape(website_url: str, ctx: Context, render_heavy_js: Optional[bool] = Non
         render_heavy_js: Whether to render heavy JS (optional)
     """
     try:
-        client = ScapeGraphClient(ctx.session_config.api_key)
+        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
         return client.scrape(website_url=website_url, render_heavy_js=render_heavy_js)
     except httpx.HTTPError as http_err:
         return {"error": str(http_err)}
@@ -476,7 +476,7 @@ def sitemap(website_url: str, ctx: Context) -> Dict[str, Any]:
         website_url: Base website URL
     """
     try:
-        client = ScapeGraphClient(ctx.session_config.api_key)
+        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
         return client.sitemap(website_url=website_url)
     except httpx.HTTPError as http_err:
         return {"error": str(http_err)}
@@ -528,7 +528,7 @@ def agentic_scrapper(
             return {"error": f"Invalid JSON for output_schema: {str(e)}"}
 
     try:
-        client = ScapeGraphClient(ctx.session_config.api_key)
+        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
         return client.agentic_scrapper(
             url=url,
             user_prompt=user_prompt,
@@ -548,7 +548,7 @@ def agentic_scrapper(
 
 # Smithery server function with Pydantic config schema
 @smithery.server(config_schema=ConfigSchema)
-def create_server(config: Optional[ConfigSchema] = None) -> FastMCP:
+def create_server() -> FastMCP:
     """
     Create and return the FastMCP server instance for Smithery deployment.
     
