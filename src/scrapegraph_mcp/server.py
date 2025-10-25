@@ -13,7 +13,7 @@ import json
 from typing import Any, Dict, Optional, List, Union
 
 import httpx
-from fastmcp import FastMCP, Context
+from mcp.server.fastmcp import Context, FastMCP
 from smithery.decorators import smithery
 from pydantic import BaseModel, Field
 
