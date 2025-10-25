@@ -1,22 +1,22 @@
-#!/usr/bin/env python3
 """
-MCP server for ScapeGraph API integration.
-This server exposes methods to use ScapeGraph's AI-powered web scraping services:
-- markdownify: Convert any webpage into clean, formatted markdown
-- smartscraper: Extract structured data from any webpage using AI
-- searchscraper: Perform AI-powered web searches with structured results
-- smartcrawler_initiate: Initiate intelligent multi-page web crawling with AI extraction or markdown conversion
-- smartcrawler_fetch_results: Retrieve results from asynchronous crawling operations
+ScapeGraph MCP Server for converting webpages to markdown.
+To run your server, use "uv run dev"
+To test interactively, use "uv run playground"
+
+Resources:
+- MCP Python SDK: https://github.com/modelcontextprotocol/python-sdk
+- ScapeGraph API: https://scrapegraphai.com
 """
 
-import os
 import json
-from typing import Any, Dict, Optional, List, Union
+import os
+from typing import Any, Dict, List, Optional, Union
 
 import httpx
-from fastmcp import FastMCP, Context
-from smithery.decorators import smithery
+from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
+
+from smithery.decorators import smithery
 
 
 class ScapeGraphClient:
@@ -38,131 +38,58 @@ class ScapeGraphClient:
         }
         self.client = httpx.Client(timeout=httpx.Timeout(120.0))
 
-
     def markdownify(self, website_url: str) -> Dict[str, Any]:
-        """
-        Convert a webpage into clean, formatted markdown.
-
-        Args:
-            website_url: URL of the webpage to convert
-
-        Returns:
-            Dictionary containing the markdown result
-        """
+        """Convert a webpage into clean, formatted markdown."""
         url = f"{self.BASE_URL}/markdownify"
-        data = {
-            "website_url": website_url
-        }
-
+        data = {"website_url": website_url}
         response = self.client.post(url, headers=self.headers, json=data)
-
         if response.status_code != 200:
-            error_msg = f"Error {response.status_code}: {response.text}"
-            raise Exception(error_msg)
-
+            raise Exception(f"Error {response.status_code}: {response.text}")
         return response.json()
 
     def smartscraper(self, user_prompt: str, website_url: str, number_of_scrolls: int = None, markdown_only: bool = None) -> Dict[str, Any]:
-        """
-        Extract structured data from a webpage using AI.
-
-        Args:
-            user_prompt: Instructions for what data to extract
-            website_url: URL of the webpage to scrape
-            number_of_scrolls: Number of infinite scrolls to perform (optional)
-            markdown_only: Whether to return only markdown content without AI processing (optional)
-
-        Returns:
-            Dictionary containing the extracted data or markdown content
-        """
+        """Extract structured data from a webpage using AI."""
         url = f"{self.BASE_URL}/smartscraper"
         data = {
             "user_prompt": user_prompt,
             "website_url": website_url
         }
-        
-        # Add number_of_scrolls to the request if provided
         if number_of_scrolls is not None:
             data["number_of_scrolls"] = number_of_scrolls
-            
-        # Add markdown_only to the request if provided
         if markdown_only is not None:
             data["markdown_only"] = markdown_only
-
         response = self.client.post(url, headers=self.headers, json=data)
-
         if response.status_code != 200:
-            error_msg = f"Error {response.status_code}: {response.text}"
-            raise Exception(error_msg)
-
+            raise Exception(f"Error {response.status_code}: {response.text}")
         return response.json()
 
     def searchscraper(self, user_prompt: str, num_results: int = None, number_of_scrolls: int = None) -> Dict[str, Any]:
-        """
-        Perform AI-powered web searches with structured results.
-
-        Args:
-            user_prompt: Search query or instructions
-            num_results: Number of websites to search (optional, default: 3 websites = 30 credits)
-            number_of_scrolls: Number of infinite scrolls to perform on each website (optional)
-
-        Returns:
-            Dictionary containing search results and reference URLs
-        """
+        """Perform AI-powered web searches with structured results."""
         url = f"{self.BASE_URL}/searchscraper"
-        data = {
-            "user_prompt": user_prompt
-        }
-        
-        # Add num_results to the request if provided
+        data = {"user_prompt": user_prompt}
         if num_results is not None:
             data["num_results"] = num_results
-            
-        # Add number_of_scrolls to the request if provided
         if number_of_scrolls is not None:
             data["number_of_scrolls"] = number_of_scrolls
-
         response = self.client.post(url, headers=self.headers, json=data)
-
         if response.status_code != 200:
-            error_msg = f"Error {response.status_code}: {response.text}"
-            raise Exception(error_msg)
-
+            raise Exception(f"Error {response.status_code}: {response.text}")
         return response.json()
 
     def scrape(self, website_url: str, render_heavy_js: Optional[bool] = None) -> Dict[str, Any]:
-        """
-        Basic scrape endpoint to fetch page content.
-
-        Args:
-            website_url: URL to scrape
-            render_heavy_js: Whether to render heavy JS (optional)
-
-        Returns:
-            Dictionary containing the scraped result
-        """
+        """Basic scrape endpoint to fetch page content."""
         url = f"{self.BASE_URL}/scrape"
         payload: Dict[str, Any] = {"website_url": website_url}
         if render_heavy_js is not None:
             payload["render_heavy_js"] = render_heavy_js
-
         response = self.client.post(url, headers=self.headers, json=payload)
         response.raise_for_status()
         return response.json()
 
     def sitemap(self, website_url: str) -> Dict[str, Any]:
-        """
-        Extract sitemap for a given website.
-
-        Args:
-            website_url: Base website URL
-
-        Returns:
-            Dictionary containing sitemap URLs/structure
-        """
+        """Extract sitemap for a given website."""
         url = f"{self.BASE_URL}/sitemap"
         payload: Dict[str, Any] = {"website_url": website_url}
-
         response = self.client.post(url, headers=self.headers, json=payload)
         response.raise_for_status()
         return response.json()
@@ -177,18 +104,7 @@ class ScapeGraphClient:
         persistent_session: Optional[bool] = None,
         timeout_seconds: Optional[float] = None,
     ) -> Dict[str, Any]:
-        """
-        Run the Agentic Scraper workflow (no live session/browser interaction).
-
-        Args:
-            url: Target website URL
-            user_prompt: Instructions for what to do/extract (optional)
-            output_schema: Desired structured output schema (optional)
-            steps: High-level steps/instructions for the agent (optional)
-            ai_extraction: Whether to enable AI extraction mode (optional)
-            persistent_session: Whether to keep session alive between steps (optional)
-            timeout_seconds: Per-request timeout override in seconds (optional)
-        """
+        """Run the Agentic Scraper workflow (no live session/browser interaction)."""
         endpoint = f"{self.BASE_URL}/agentic-scrapper"
         payload: Dict[str, Any] = {"url": url}
         if user_prompt is not None:
@@ -210,43 +126,18 @@ class ScapeGraphClient:
         return response.json()
 
     def smartcrawler_initiate(
-        self, 
-        url: str, 
-        prompt: str = None, 
+        self,
+        url: str,
+        prompt: str = None,
         extraction_mode: str = "ai",
         depth: int = None,
         max_pages: int = None,
         same_domain_only: bool = None
     ) -> Dict[str, Any]:
-        """
-        Initiate a SmartCrawler request for multi-page web crawling.
-        
-        SmartCrawler supports two modes:
-        - AI Extraction Mode (10 credits per page): Extracts structured data based on your prompt
-        - Markdown Conversion Mode (2 credits per page): Converts pages to clean markdown
-
-        Smartcrawler takes some time to process the request and returns the request id.
-        Use smartcrawler_fetch_results to get the results of the request.
-        You have to keep polling the smartcrawler_fetch_results until the request is complete.
-        The request is complete when the status is "completed".
-
-        Args:
-            url: Starting URL to crawl
-            prompt: AI prompt for data extraction (required for AI mode)
-            extraction_mode: "ai" for AI extraction or "markdown" for markdown conversion (default: "ai")
-            depth: Maximum link traversal depth (optional)
-            max_pages: Maximum number of pages to crawl (optional)
-            same_domain_only: Whether to crawl only within the same domain (optional)
-
-        Returns:
-            Dictionary containing the request ID for async processing
-        """
+        """Initiate a SmartCrawler request for multi-page web crawling."""
         endpoint = f"{self.BASE_URL}/crawl"
-        data = {
-            "url": url
-        }
-        
-        # Handle extraction mode
+        data = {"url": url}
+
         if extraction_mode == "markdown":
             data["markdown_only"] = True
         elif extraction_mode == "ai":
@@ -255,6 +146,7 @@ class ScapeGraphClient:
             data["prompt"] = prompt
         else:
             raise ValueError(f"Invalid extraction_mode: {extraction_mode}. Must be 'ai' or 'markdown'")
+
         if depth is not None:
             data["depth"] = depth
         if max_pages is not None:
@@ -263,39 +155,16 @@ class ScapeGraphClient:
             data["same_domain_only"] = same_domain_only
 
         response = self.client.post(endpoint, headers=self.headers, json=data)
-
         if response.status_code != 200:
-            error_msg = f"Error {response.status_code}: {response.text}"
-            raise Exception(error_msg)
-
+            raise Exception(f"Error {response.status_code}: {response.text}")
         return response.json()
 
     def smartcrawler_fetch_results(self, request_id: str) -> Dict[str, Any]:
-        """
-        Fetch the results of a SmartCrawler operation.
-
-        Args:
-            request_id: The request ID returned by smartcrawler_initiate
-
-        Returns:
-            Dictionary containing the crawled data (structured extraction or markdown)
-            and metadata about processed pages
-
-        Note:
-        It takes some time to process the request and returns the results.
-        Meanwhile it returns the status of the request.
-        You have to keep polling the smartcrawler_fetch_results until the request is complete.
-        The request is complete when the status is "completed". and you get results
-        Keep polling the smartcrawler_fetch_results until the request is complete.
-        """
+        """Fetch the results of a SmartCrawler operation."""
         endpoint = f"{self.BASE_URL}/crawl/{request_id}"
-        
         response = self.client.get(endpoint, headers=self.headers)
-
         if response.status_code != 200:
-            error_msg = f"Error {response.status_code}: {response.text}"
-            raise Exception(error_msg)
-
+            raise Exception(f"Error {response.status_code}: {response.text}")
         return response.json()
 
     def close(self) -> None:
@@ -303,49 +172,29 @@ class ScapeGraphClient:
         self.client.close()
 
 
-# Pydantic configuration schema for Smithery
-class ServerConfig(BaseModel):
-    scrapegraph_api_key: str = Field(description="Your Scrapegraph API key")
+class ConfigSchema(BaseModel):
+    scrapegraph_api_key: str = Field(..., description="Your ScapeGraph API key")
 
 
-@smithery.server(config_schema=ServerConfig)
-def create_server() -> FastMCP:
-    """
-    Create and return the FastMCP server instance for Smithery deployment.
+@smithery.server(config_schema=ConfigSchema)
+def create_server():
+    """Create and configure the MCP server."""
 
-    Returns:
-        Configured FastMCP server instance
-    """
-    # Create MCP server
-    mcp = FastMCP("ScapeGraph API MCP Server")
+    server = FastMCP("ScapeGraph MCP Server")
 
     def get_api_key(ctx: Context) -> Optional[str]:
-        """
-        Helper function to get the Scrapegraph API key from context or environment.
-        """
+        """Helper to get API key from context or environment."""
         if ctx and ctx.session_config and ctx.session_config.scrapegraph_api_key:
             return ctx.session_config.scrapegraph_api_key
         return os.environ.get("SGAI_API_KEY")
 
-    # Add tool for markdownify
-    @mcp.tool()
+    @server.tool()
     def markdownify(website_url: str, ctx: Context) -> Dict[str, Any]:
-        """
-        Convert a webpage into clean, formatted markdown.
-
-        Args:
-            website_url: URL of the webpage to convert
-            ctx: Context object containing session configuration
-
-        Returns:
-            Dictionary containing the markdown result
-        """
-        # Get API key from context or environment
+        """Convert a webpage into clean, formatted markdown."""
         api_key = get_api_key(ctx)
-        
         if not api_key:
-            return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
-        
+            return {"error": "ScapeGraph API key not configured."}
+
         client = ScapeGraphClient(api_key)
         try:
             return client.markdownify(website_url)
@@ -354,34 +203,19 @@ def create_server() -> FastMCP:
         finally:
             client.close()
 
-    # Add tool for smartscraper
-    @mcp.tool()
+    @server.tool()
     def smartscraper(
-        user_prompt: str, 
+        user_prompt: str,
         website_url: str,
         number_of_scrolls: int = None,
         markdown_only: bool = None,
         ctx: Context = None
     ) -> Dict[str, Any]:
-        """
-        Extract structured data from a webpage using AI.
-
-        Args:
-            user_prompt: Instructions for what data to extract
-            website_url: URL of the webpage to scrape
-            number_of_scrolls: Number of infinite scrolls to perform (optional)
-            markdown_only: Whether to return only markdown content without AI processing (optional)
-            ctx: Context object containing session configuration
-
-        Returns:
-            Dictionary containing the extracted data or markdown content
-        """
-        # Get API key from context or environment
+        """Extract structured data from a webpage using AI."""
         api_key = get_api_key(ctx)
-        
         if not api_key:
-            return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
-        
+            return {"error": "ScapeGraph API key not configured."}
+
         client = ScapeGraphClient(api_key)
         try:
             return client.smartscraper(user_prompt, website_url, number_of_scrolls, markdown_only)
@@ -390,32 +224,18 @@ def create_server() -> FastMCP:
         finally:
             client.close()
 
-    # Add tool for searchscraper
-    @mcp.tool()
+    @server.tool()
     def searchscraper(
         user_prompt: str,
         num_results: int = None,
         number_of_scrolls: int = None,
         ctx: Context = None
     ) -> Dict[str, Any]:
-        """
-        Perform AI-powered web searches with structured results.
-
-        Args:
-            user_prompt: Search query or instructions
-            num_results: Number of websites to search (optional, default: 3 websites = 30 credits)
-            number_of_scrolls: Number of infinite scrolls to perform on each website (optional)
-            ctx: Context object containing session configuration
-
-        Returns:
-            Dictionary containing search results and reference URLs
-        """
-        # Get API key from context or environment
+        """Perform AI-powered web searches with structured results."""
         api_key = get_api_key(ctx)
-        
         if not api_key:
-            return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
-        
+            return {"error": "ScapeGraph API key not configured."}
+
         client = ScapeGraphClient(api_key)
         try:
             return client.searchscraper(user_prompt, num_results, number_of_scrolls)
@@ -424,140 +244,41 @@ def create_server() -> FastMCP:
         finally:
             client.close()
 
-    # Add tool for SmartCrawler initiation
-    @mcp.tool()
-    def smartcrawler_initiate(
-        url: str,
-        prompt: str = None,
-        extraction_mode: str = "ai",
-        depth: int = None,
-        max_pages: int = None,
-        same_domain_only: bool = None,
-        ctx: Context = None
-    ) -> Dict[str, Any]:
-        """
-        Initiate a SmartCrawler request for intelligent multi-page web crawling.
-        
-        SmartCrawler supports two modes:
-        - AI Extraction Mode (10 credits per page): Extracts structured data based on your prompt
-        - Markdown Conversion Mode (2 credits per page): Converts pages to clean markdown
-
-        Args:
-            url: Starting URL to crawl
-            prompt: AI prompt for data extraction (required for AI mode)
-            extraction_mode: "ai" for AI extraction or "markdown" for markdown conversion (default: "ai")
-            depth: Maximum link traversal depth (optional)
-            max_pages: Maximum number of pages to crawl (optional)
-            same_domain_only: Whether to crawl only within the same domain (optional)
-            ctx: Context object containing session configuration
-
-        Returns:
-            Dictionary containing the request ID for async processing
-        """
-        # Get API key from context or environment
-        api_key = get_api_key(ctx)
-        
-        if not api_key:
-            return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
-        
-        client = ScapeGraphClient(api_key)
-        try:
-            return client.smartcrawler_initiate(
-                url=url,
-                prompt=prompt,
-                extraction_mode=extraction_mode,
-                depth=depth,
-                max_pages=max_pages,
-                same_domain_only=same_domain_only
-            )
-        except Exception as e:
-            return {"error": str(e)}
-        finally:
-            client.close()
-
-    # Add tool for fetching SmartCrawler results
-    @mcp.tool()
-    def smartcrawler_fetch_results(request_id: str, ctx: Context = None) -> Dict[str, Any]:
-        """
-        Fetch the results of a SmartCrawler operation.
-
-        Args:
-            request_id: The request ID returned by smartcrawler_initiate
-            ctx: Context object containing session configuration
-
-        Returns:
-            Dictionary containing the crawled data (structured extraction or markdown)
-            and metadata about processed pages
-        """
-        # Get API key from context or environment
-        api_key = get_api_key(ctx)
-        
-        if not api_key:
-            return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
-        
-        client = ScapeGraphClient(api_key)
-        try:
-            return client.smartcrawler_fetch_results(request_id)
-        except Exception as e:
-            return {"error": str(e)}
-        finally:
-            client.close()
-
-    # Add tool for basic scrape
-    @mcp.tool()
+    @server.tool()
     def scrape(website_url: str, render_heavy_js: Optional[bool] = None, ctx: Context = None) -> Dict[str, Any]:
-        """
-        Fetch page content for a URL.
-
-        Args:
-            website_url: URL to scrape
-            render_heavy_js: Whether to render heavy JS (optional)
-            ctx: Context object containing session configuration
-        """
-        # Get API key from context or environment
+        """Fetch page content for a URL."""
         api_key = get_api_key(ctx)
-        
         if not api_key:
-            return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
-        
+            return {"error": "ScapeGraph API key not configured."}
+
         client = ScapeGraphClient(api_key)
         try:
             return client.scrape(website_url=website_url, render_heavy_js=render_heavy_js)
         except httpx.HTTPError as http_err:
             return {"error": str(http_err)}
-        except ValueError as val_err:
-            return {"error": str(val_err)}
+        except Exception as e:
+            return {"error": str(e)}
         finally:
             client.close()
 
-    # Add tool for sitemap extraction
-    @mcp.tool()
+    @server.tool()
     def sitemap(website_url: str, ctx: Context = None) -> Dict[str, Any]:
-        """
-        Extract sitemap for a website.
-
-        Args:
-            website_url: Base website URL
-            ctx: Context object containing session configuration
-        """
-        # Get API key from context or environment
+        """Extract sitemap for a website."""
         api_key = get_api_key(ctx)
-        
         if not api_key:
-            return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
-        
+            return {"error": "ScapeGraph API key not configured."}
+
         client = ScapeGraphClient(api_key)
         try:
             return client.sitemap(website_url=website_url)
         except httpx.HTTPError as http_err:
             return {"error": str(http_err)}
-        except ValueError as val_err:
-            return {"error": str(val_err)}
+        except Exception as e:
+            return {"error": str(e)}
         finally:
             client.close()
 
-    # Add tool for Agentic Scraper (no live session/browser interaction)
-    @mcp.tool()
+    @server.tool()
     def agentic_scrapper(
         url: str,
         user_prompt: Optional[str] = None,
@@ -568,28 +289,23 @@ def create_server() -> FastMCP:
         timeout_seconds: Optional[float] = None,
         ctx: Context = None,
     ) -> Dict[str, Any]:
-        """
-        Run the Agentic Scraper workflow. Accepts flexible input forms for steps and schema.
-        """
-        # Get API key from context or environment
+        """Run the Agentic Scraper workflow. Accepts flexible input forms for steps and schema."""
         api_key = get_api_key(ctx)
-        
         if not api_key:
-            return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
+            return {"error": "ScapeGraph API key not configured."}
 
         # Normalize inputs
         normalized_steps: Optional[List[str]] = None
         if isinstance(steps, list):
             normalized_steps = steps
         elif isinstance(steps, str):
-            parsed_steps: Optional[Any] = None
             try:
                 parsed_steps = json.loads(steps)
+                if isinstance(parsed_steps, list):
+                    normalized_steps = parsed_steps
+                else:
+                    normalized_steps = [steps]
             except json.JSONDecodeError:
-                parsed_steps = None
-            if isinstance(parsed_steps, list):
-                normalized_steps = parsed_steps
-            else:
                 normalized_steps = [steps]
 
         normalized_schema: Optional[Dict[str, Any]] = None
@@ -620,12 +336,64 @@ def create_server() -> FastMCP:
             return {"error": f"Request timed out: {str(timeout_err)}"}
         except httpx.HTTPError as http_err:
             return {"error": str(http_err)}
-        except ValueError as val_err:
-            return {"error": str(val_err)}
+        except Exception as e:
+            return {"error": str(e)}
         finally:
             client.close()
 
-    return mcp
+    @server.tool()
+    def smartcrawler_initiate(
+        url: str,
+        prompt: str = None,
+        extraction_mode: str = "ai",
+        depth: int = None,
+        max_pages: int = None,
+        same_domain_only: bool = None,
+        ctx: Context = None
+    ) -> Dict[str, Any]:
+        """
+        Initiate a SmartCrawler request for intelligent multi-page web crawling.
+
+        SmartCrawler supports two modes:
+        - AI Extraction Mode (10 credits per page): Extracts structured data based on your prompt
+        - Markdown Conversion Mode (2 credits per page): Converts pages to clean markdown
+        """
+        api_key = get_api_key(ctx)
+        if not api_key:
+            return {"error": "ScapeGraph API key not configured."}
+
+        client = ScapeGraphClient(api_key)
+        try:
+            return client.smartcrawler_initiate(
+                url=url,
+                prompt=prompt,
+                extraction_mode=extraction_mode,
+                depth=depth,
+                max_pages=max_pages,
+                same_domain_only=same_domain_only
+            )
+        except Exception as e:
+            return {"error": str(e)}
+        finally:
+            client.close()
+
+    @server.tool()
+    def smartcrawler_fetch_results(request_id: str, ctx: Context = None) -> Dict[str, Any]:
+        """Fetch the results of a SmartCrawler operation."""
+        api_key = get_api_key(ctx)
+        if not api_key:
+            return {"error": "ScapeGraph API key not configured."}
+
+        client = ScapeGraphClient(api_key)
+        try:
+            return client.smartcrawler_fetch_results(request_id)
+        except Exception as e:
+            return {"error": str(e)}
+        finally:
+            client.close()
+
+    return server
+
 
 def main():
     """Main entry point for running the ScapeGraph MCP server with stdio transport."""
