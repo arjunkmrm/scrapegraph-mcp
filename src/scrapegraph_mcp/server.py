@@ -303,13 +303,18 @@ class ScapeGraphClient:
         self.client.close()
 
 
-# Global variable for scrapegraph client
-scrapegraph_client = None
-
-
 # Pydantic configuration schema for Smithery
 class ServerConfig(BaseModel):
-    scrapegraphApiKey: str = Field(description="Your Scrapegraph API key")
+    scrapegraph_api_key: str = Field(description="Your Scrapegraph API key")
+
+
+def get_api_key(ctx: Context) -> Optional[str]:
+    """
+    Helper function to get the Scrapegraph API key from context or environment.
+    """
+    if ctx and ctx.session_config and ctx.session_config.scrapegraph_api_key:
+        return ctx.session_config.scrapegraph_api_key
+    return os.environ.get("SGAI_API_KEY")
 
 
 @smithery.server(config_schema=ServerConfig)
@@ -320,8 +325,6 @@ def create_server() -> FastMCP:
     Returns:
         Configured FastMCP server instance
     """
-    global scrapegraph_client
-
     # Create MCP server
     mcp = FastMCP("ScapeGraph API MCP Server")
 
@@ -339,11 +342,7 @@ def create_server() -> FastMCP:
             Dictionary containing the markdown result
         """
         # Get API key from context or environment
-        api_key = None
-        if ctx and ctx.session_config and ctx.session_config.scrapegraphApiKey:
-            api_key = ctx.session_config.scrapegraphApiKey
-        else:
-            api_key = os.environ.get("SGAI_API_KEY")
+        api_key = get_api_key(ctx)
         
         if not api_key:
             return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
@@ -379,11 +378,7 @@ def create_server() -> FastMCP:
             Dictionary containing the extracted data or markdown content
         """
         # Get API key from context or environment
-        api_key = None
-        if ctx and ctx.session_config and ctx.session_config.scrapegraphApiKey:
-            api_key = ctx.session_config.scrapegraphApiKey
-        else:
-            api_key = os.environ.get("SGAI_API_KEY")
+        api_key = get_api_key(ctx)
         
         if not api_key:
             return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
@@ -417,11 +412,7 @@ def create_server() -> FastMCP:
             Dictionary containing search results and reference URLs
         """
         # Get API key from context or environment
-        api_key = None
-        if ctx and ctx.session_config and ctx.session_config.scrapegraphApiKey:
-            api_key = ctx.session_config.scrapegraphApiKey
-        else:
-            api_key = os.environ.get("SGAI_API_KEY")
+        api_key = get_api_key(ctx)
         
         if not api_key:
             return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
@@ -465,11 +456,7 @@ def create_server() -> FastMCP:
             Dictionary containing the request ID for async processing
         """
         # Get API key from context or environment
-        api_key = None
-        if ctx and ctx.session_config and ctx.session_config.scrapegraphApiKey:
-            api_key = ctx.session_config.scrapegraphApiKey
-        else:
-            api_key = os.environ.get("SGAI_API_KEY")
+        api_key = get_api_key(ctx)
         
         if not api_key:
             return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
@@ -504,11 +491,7 @@ def create_server() -> FastMCP:
             and metadata about processed pages
         """
         # Get API key from context or environment
-        api_key = None
-        if ctx and ctx.session_config and ctx.session_config.scrapegraphApiKey:
-            api_key = ctx.session_config.scrapegraphApiKey
-        else:
-            api_key = os.environ.get("SGAI_API_KEY")
+        api_key = get_api_key(ctx)
         
         if not api_key:
             return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
@@ -533,11 +516,7 @@ def create_server() -> FastMCP:
             ctx: Context object containing session configuration
         """
         # Get API key from context or environment
-        api_key = None
-        if ctx and ctx.session_config and ctx.session_config.scrapegraphApiKey:
-            api_key = ctx.session_config.scrapegraphApiKey
-        else:
-            api_key = os.environ.get("SGAI_API_KEY")
+        api_key = get_api_key(ctx)
         
         if not api_key:
             return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
@@ -563,11 +542,7 @@ def create_server() -> FastMCP:
             ctx: Context object containing session configuration
         """
         # Get API key from context or environment
-        api_key = None
-        if ctx and ctx.session_config and ctx.session_config.scrapegraphApiKey:
-            api_key = ctx.session_config.scrapegraphApiKey
-        else:
-            api_key = os.environ.get("SGAI_API_KEY")
+        api_key = get_api_key(ctx)
         
         if not api_key:
             return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
@@ -598,11 +573,7 @@ def create_server() -> FastMCP:
         Run the Agentic Scraper workflow. Accepts flexible input forms for steps and schema.
         """
         # Get API key from context or environment
-        api_key = None
-        if ctx and ctx.session_config and ctx.session_config.scrapegraphApiKey:
-            api_key = ctx.session_config.scrapegraphApiKey
-        else:
-            api_key = os.environ.get("SGAI_API_KEY")
+        api_key = get_api_key(ctx)
         
         if not api_key:
             return {"error": "ScapeGraph API key not configured. Please provide SGAI_API_KEY."}
