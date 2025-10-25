@@ -307,245 +307,6 @@ class ConfigSchema(BaseModel):
     scrapegraph_api_key: str = Field(..., description="Your Scrapegraph API key")
 
 
-# Create MCP server
-mcp = FastMCP("ScapeGraph API MCP Server")
-
-
-# Add tool for markdownify
-@mcp.tool()
-def markdownify(website_url: str, ctx: Context) -> Dict[str, Any]:
-    """
-    Convert a webpage into clean, formatted markdown.
-
-    Args:
-        website_url: URL of the webpage to convert
-
-    Returns:
-        Dictionary containing the markdown result
-    """
-    try:
-        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
-        return client.markdownify(website_url)
-    except Exception as e:
-        return {"error": str(e)}
-
-
-# Add tool for smartscraper
-@mcp.tool()
-def smartscraper(
-    user_prompt: str, 
-    website_url: str,
-    ctx: Context,
-    number_of_scrolls: int = None,
-    markdown_only: bool = None
-) -> Dict[str, Any]:
-    """
-    Extract structured data from a webpage using AI.
-
-    Args:
-        user_prompt: Instructions for what data to extract
-        website_url: URL of the webpage to scrape
-        number_of_scrolls: Number of infinite scrolls to perform (optional)
-        markdown_only: Whether to return only markdown content without AI processing (optional)
-
-    Returns:
-        Dictionary containing the extracted data or markdown content
-    """
-    try:
-        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
-        return client.smartscraper(user_prompt, website_url, number_of_scrolls, markdown_only)
-    except Exception as e:
-        return {"error": str(e)}
-
-
-# Add tool for searchscraper
-@mcp.tool()
-def searchscraper(
-    user_prompt: str,
-    ctx: Context,
-    num_results: int = None,
-    number_of_scrolls: int = None
-) -> Dict[str, Any]:
-    """
-    Perform AI-powered web searches with structured results.
-
-    Args:
-        user_prompt: Search query or instructions
-        num_results: Number of websites to search (optional, default: 3 websites = 30 credits)
-        number_of_scrolls: Number of infinite scrolls to perform on each website (optional)
-
-    Returns:
-        Dictionary containing search results and reference URLs
-    """
-    try:
-        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
-        return client.searchscraper(user_prompt, num_results, number_of_scrolls)
-    except Exception as e:
-        return {"error": str(e)}
-
-
-# Add tool for SmartCrawler initiation
-@mcp.tool()
-def smartcrawler_initiate(
-    url: str,
-    ctx: Context,
-    prompt: str = None,
-    extraction_mode: str = "ai",
-    depth: int = None,
-    max_pages: int = None,
-    same_domain_only: bool = None
-) -> Dict[str, Any]:
-    """
-    Initiate a SmartCrawler request for intelligent multi-page web crawling.
-    
-    SmartCrawler supports two modes:
-    - AI Extraction Mode (10 credits per page): Extracts structured data based on your prompt
-    - Markdown Conversion Mode (2 credits per page): Converts pages to clean markdown
-
-    Args:
-        url: Starting URL to crawl
-        prompt: AI prompt for data extraction (required for AI mode)
-        extraction_mode: "ai" for AI extraction or "markdown" for markdown conversion (default: "ai")
-        depth: Maximum link traversal depth (optional)
-        max_pages: Maximum number of pages to crawl (optional)
-        same_domain_only: Whether to crawl only within the same domain (optional)
-
-    Returns:
-        Dictionary containing the request ID for async processing
-    """
-    try:
-        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
-        return client.smartcrawler_initiate(
-            url=url,
-            prompt=prompt,
-            extraction_mode=extraction_mode,
-            depth=depth,
-            max_pages=max_pages,
-            same_domain_only=same_domain_only
-        )
-    except Exception as e:
-        return {"error": str(e)}
-
-
-# Add tool for fetching SmartCrawler results
-@mcp.tool()
-def smartcrawler_fetch_results(request_id: str, ctx: Context) -> Dict[str, Any]:
-    """
-    Fetch the results of a SmartCrawler operation.
-
-    Args:
-        request_id: The request ID returned by smartcrawler_initiate
-
-    Returns:
-        Dictionary containing the crawled data (structured extraction or markdown)
-        and metadata about processed pages
-    """
-    try:
-        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
-        return client.smartcrawler_fetch_results(request_id)
-    except Exception as e:
-        return {"error": str(e)}
-
-
-# Add tool for basic scrape
-@mcp.tool()
-def scrape(website_url: str, ctx: Context, render_heavy_js: Optional[bool] = None) -> Dict[str, Any]:
-    """
-    Fetch page content for a URL.
-
-    Args:
-        website_url: URL to scrape
-        render_heavy_js: Whether to render heavy JS (optional)
-    """
-    try:
-        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
-        return client.scrape(website_url=website_url, render_heavy_js=render_heavy_js)
-    except httpx.HTTPError as http_err:
-        return {"error": str(http_err)}
-    except ValueError as val_err:
-        return {"error": str(val_err)}
-
-
-# Add tool for sitemap extraction
-@mcp.tool()
-def sitemap(website_url: str, ctx: Context) -> Dict[str, Any]:
-    """
-    Extract sitemap for a website.
-
-    Args:
-        website_url: Base website URL
-    """
-    try:
-        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
-        return client.sitemap(website_url=website_url)
-    except httpx.HTTPError as http_err:
-        return {"error": str(http_err)}
-    except ValueError as val_err:
-        return {"error": str(val_err)}
-
-
-# Add tool for Agentic Scraper (no live session/browser interaction)
-@mcp.tool()
-def agentic_scrapper(
-    url: str,
-    ctx: Context,
-    user_prompt: Optional[str] = None,
-    output_schema: Optional[Union[str, Dict[str, Any]]] = None,
-    steps: Optional[Union[str, List[str]]] = None,
-    ai_extraction: Optional[bool] = None,
-    persistent_session: Optional[bool] = None,
-    timeout_seconds: Optional[float] = None,
-) -> Dict[str, Any]:
-    """
-    Run the Agentic Scraper workflow. Accepts flexible input forms for steps and schema.
-    """
-    # Normalize inputs
-    normalized_steps: Optional[List[str]] = None
-    if isinstance(steps, list):
-        normalized_steps = steps
-    elif isinstance(steps, str):
-        parsed_steps: Optional[Any] = None
-        try:
-            parsed_steps = json.loads(steps)
-        except json.JSONDecodeError:
-            parsed_steps = None
-        if isinstance(parsed_steps, list):
-            normalized_steps = parsed_steps
-        else:
-            normalized_steps = [steps]
-
-    normalized_schema: Optional[Dict[str, Any]] = None
-    if isinstance(output_schema, dict):
-        normalized_schema = output_schema
-    elif isinstance(output_schema, str):
-        try:
-            parsed_schema = json.loads(output_schema)
-            if isinstance(parsed_schema, dict):
-                normalized_schema = parsed_schema
-            else:
-                return {"error": "output_schema must be a JSON object"}
-        except json.JSONDecodeError as e:
-            return {"error": f"Invalid JSON for output_schema: {str(e)}"}
-
-    try:
-        client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
-        return client.agentic_scrapper(
-            url=url,
-            user_prompt=user_prompt,
-            output_schema=normalized_schema,
-            steps=normalized_steps,
-            ai_extraction=ai_extraction,
-            persistent_session=persistent_session,
-            timeout_seconds=timeout_seconds,
-        )
-    except httpx.TimeoutException as timeout_err:
-        return {"error": f"Request timed out: {str(timeout_err)}"}
-    except httpx.HTTPError as http_err:
-        return {"error": str(http_err)}
-    except ValueError as val_err:
-        return {"error": str(val_err)}
-
-
 # Smithery server function with Pydantic config schema
 @smithery.server(config_schema=ConfigSchema)
 def create_server() -> FastMCP:
@@ -555,20 +316,248 @@ def create_server() -> FastMCP:
     The API key is provided via session config in the Context object,
     which is passed to each tool at runtime.
 
-    Args:
-        config: Configuration object with api_key (passed via Context to tools)
-
     Returns:
         Configured FastMCP server instance
     """
-    return mcp
+    # Create MCP server
+    server = FastMCP("ScapeGraph API MCP Server")
+
+    # Add tool for markdownify
+    @server.tool()
+    def markdownify(website_url: str, ctx: Context) -> Dict[str, Any]:
+        """
+        Convert a webpage into clean, formatted markdown.
+
+        Args:
+            website_url: URL of the webpage to convert
+
+        Returns:
+            Dictionary containing the markdown result
+        """
+        try:
+            client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
+            return client.markdownify(website_url)
+        except Exception as e:
+            return {"error": str(e)}
+
+    # Add tool for smartscraper
+    @server.tool()
+    def smartscraper(
+        user_prompt: str, 
+        website_url: str,
+        ctx: Context,
+        number_of_scrolls: int = None,
+        markdown_only: bool = None
+    ) -> Dict[str, Any]:
+        """
+        Extract structured data from a webpage using AI.
+
+        Args:
+            user_prompt: Instructions for what data to extract
+            website_url: URL of the webpage to scrape
+            number_of_scrolls: Number of infinite scrolls to perform (optional)
+            markdown_only: Whether to return only markdown content without AI processing (optional)
+
+        Returns:
+            Dictionary containing the extracted data or markdown content
+        """
+        try:
+            client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
+            return client.smartscraper(user_prompt, website_url, number_of_scrolls, markdown_only)
+        except Exception as e:
+            return {"error": str(e)}
+
+    # Add tool for searchscraper
+    @server.tool()
+    def searchscraper(
+        user_prompt: str,
+        ctx: Context,
+        num_results: int = None,
+        number_of_scrolls: int = None
+    ) -> Dict[str, Any]:
+        """
+        Perform AI-powered web searches with structured results.
+
+        Args:
+            user_prompt: Search query or instructions
+            num_results: Number of websites to search (optional, default: 3 websites = 30 credits)
+            number_of_scrolls: Number of infinite scrolls to perform on each website (optional)
+
+        Returns:
+            Dictionary containing search results and reference URLs
+        """
+        try:
+            client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
+            return client.searchscraper(user_prompt, num_results, number_of_scrolls)
+        except Exception as e:
+            return {"error": str(e)}
+
+    # Add tool for SmartCrawler initiation
+    @server.tool()
+    def smartcrawler_initiate(
+        url: str,
+        ctx: Context,
+        prompt: str = None,
+        extraction_mode: str = "ai",
+        depth: int = None,
+        max_pages: int = None,
+        same_domain_only: bool = None
+    ) -> Dict[str, Any]:
+        """
+        Initiate a SmartCrawler request for intelligent multi-page web crawling.
+        
+        SmartCrawler supports two modes:
+        - AI Extraction Mode (10 credits per page): Extracts structured data based on your prompt
+        - Markdown Conversion Mode (2 credits per page): Converts pages to clean markdown
+
+        Args:
+            url: Starting URL to crawl
+            prompt: AI prompt for data extraction (required for AI mode)
+            extraction_mode: "ai" for AI extraction or "markdown" for markdown conversion (default: "ai")
+            depth: Maximum link traversal depth (optional)
+            max_pages: Maximum number of pages to crawl (optional)
+            same_domain_only: Whether to crawl only within the same domain (optional)
+
+        Returns:
+            Dictionary containing the request ID for async processing
+        """
+        try:
+            client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
+            return client.smartcrawler_initiate(
+                url=url,
+                prompt=prompt,
+                extraction_mode=extraction_mode,
+                depth=depth,
+                max_pages=max_pages,
+                same_domain_only=same_domain_only
+            )
+        except Exception as e:
+            return {"error": str(e)}
+
+    # Add tool for fetching SmartCrawler results
+    @server.tool()
+    def smartcrawler_fetch_results(request_id: str, ctx: Context) -> Dict[str, Any]:
+        """
+        Fetch the results of a SmartCrawler operation.
+
+        Args:
+            request_id: The request ID returned by smartcrawler_initiate
+
+        Returns:
+            Dictionary containing the crawled data (structured extraction or markdown)
+            and metadata about processed pages
+        """
+        try:
+            client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
+            return client.smartcrawler_fetch_results(request_id)
+        except Exception as e:
+            return {"error": str(e)}
+
+    # Add tool for basic scrape
+    @server.tool()
+    def scrape(website_url: str, ctx: Context, render_heavy_js: Optional[bool] = None) -> Dict[str, Any]:
+        """
+        Fetch page content for a URL.
+
+        Args:
+            website_url: URL to scrape
+            render_heavy_js: Whether to render heavy JS (optional)
+        """
+        try:
+            client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
+            return client.scrape(website_url=website_url, render_heavy_js=render_heavy_js)
+        except httpx.HTTPError as http_err:
+            return {"error": str(http_err)}
+        except ValueError as val_err:
+            return {"error": str(val_err)}
+
+    # Add tool for sitemap extraction
+    @server.tool()
+    def sitemap(website_url: str, ctx: Context) -> Dict[str, Any]:
+        """
+        Extract sitemap for a website.
+
+        Args:
+            website_url: Base website URL
+        """
+        try:
+            client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
+            return client.sitemap(website_url=website_url)
+        except httpx.HTTPError as http_err:
+            return {"error": str(http_err)}
+        except ValueError as val_err:
+            return {"error": str(val_err)}
+
+    # Add tool for Agentic Scraper (no live session/browser interaction)
+    @server.tool()
+    def agentic_scrapper(
+        url: str,
+        ctx: Context,
+        user_prompt: Optional[str] = None,
+        output_schema: Optional[Union[str, Dict[str, Any]]] = None,
+        steps: Optional[Union[str, List[str]]] = None,
+        ai_extraction: Optional[bool] = None,
+        persistent_session: Optional[bool] = None,
+        timeout_seconds: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """
+        Run the Agentic Scraper workflow. Accepts flexible input forms for steps and schema.
+        """
+        # Normalize inputs
+        normalized_steps: Optional[List[str]] = None
+        if isinstance(steps, list):
+            normalized_steps = steps
+        elif isinstance(steps, str):
+            parsed_steps: Optional[Any] = None
+            try:
+                parsed_steps = json.loads(steps)
+            except json.JSONDecodeError:
+                parsed_steps = None
+            if isinstance(parsed_steps, list):
+                normalized_steps = parsed_steps
+            else:
+                normalized_steps = [steps]
+
+        normalized_schema: Optional[Dict[str, Any]] = None
+        if isinstance(output_schema, dict):
+            normalized_schema = output_schema
+        elif isinstance(output_schema, str):
+            try:
+                parsed_schema = json.loads(output_schema)
+                if isinstance(parsed_schema, dict):
+                    normalized_schema = parsed_schema
+                else:
+                    return {"error": "output_schema must be a JSON object"}
+            except json.JSONDecodeError as e:
+                return {"error": f"Invalid JSON for output_schema: {str(e)}"}
+
+        try:
+            client = ScapeGraphClient(ctx.session_config.scrapegraph_api_key)
+            return client.agentic_scrapper(
+                url=url,
+                user_prompt=user_prompt,
+                output_schema=normalized_schema,
+                steps=normalized_steps,
+                ai_extraction=ai_extraction,
+                persistent_session=persistent_session,
+                timeout_seconds=timeout_seconds,
+            )
+        except httpx.TimeoutException as timeout_err:
+            return {"error": f"Request timed out: {str(timeout_err)}"}
+        except httpx.HTTPError as http_err:
+            return {"error": str(http_err)}
+        except ValueError as val_err:
+            return {"error": str(val_err)}
+
+    return server
 
 
 def main() -> None:
     """Run the ScapeGraph MCP server."""
     print("Starting ScapeGraph MCP server!")
-    # Run the server
-    mcp.run(transport="stdio")
+    # Create and run the server
+    server = create_server()
+    server.run(transport="stdio")
 
 
 if __name__ == "__main__":
