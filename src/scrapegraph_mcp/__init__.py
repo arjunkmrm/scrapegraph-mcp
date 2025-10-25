@@ -1,5 +1,3 @@
-"""ScapeGraph MCP Server."""
+"""Scrapegraph server - An MCP server built with Smithery."""
 
-from .server import main
-
-__all__ = ["main"]
+__version__ = "0.1.0"
